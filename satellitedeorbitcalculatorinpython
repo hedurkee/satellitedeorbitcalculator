@@ -1,0 +1,324 @@
+# ------------------------------------------------------
+#        Name: Hannah Durkee and Alina Siminiouk
+#    Filename: prototype.py
+#     Section: L01, L04
+#        Date: 04.24.19
+#  References: listed throughout code
+# ------------------------------------------------------
+
+import math
+
+def main():
+    intro()
+    #initializes user choice
+    typeentry = input("""Choose a satellite and run the calculator (A)? FAQ (B) 
+""")
+    if typeentry == "A" or typeentry == "a" :
+        sat_calc()
+        ask_again_fx()
+    if typeentry == "B" or typeentry == "b" :
+        FAQ_fx()
+        ask_again_fx()
+
+
+#------------------------------------------------------------------------------------
+
+    
+def sat_calc():
+    
+   #SATELLITE OPTIONS
+    sat_choice = input("""Make new satellite (A) or run a preset ISS (B)?
+Maybe try the experimental (subject to change) Smith-NASA Thermosphere Test Probe (C)?
+WARNING: Running the ISS will take the longest of the presets to calculate! (expect a small delay)
+""").upper()
+    
+    #CUSTOM 
+    if sat_choice == "A":
+        name = input("What's your satellite's name? ")
+        mass = float(input("input a mass in kg "))
+        area = float(input("input a area in m^2 "))
+        initialAlt = int(input("input an intitial altitude above Earth's surface in km ")) #must be under 500km
+        SRF = float(input("input an solar radio Flux ")) #solar Radio Flux 
+        GMI = float(input("input an Geomagnetic Index in Ap ")) # geomagnetic index
+
+    #ISS
+    elif sat_choice == "B":
+        name = "International Space Station (ISS)"
+        mass = 419725 #kg
+        area = 130 #m^2
+        initialAlt = 400 #standard ISS altitude (ranges irl)
+        SRF = 70 #standard values range 65-300
+        GMI = 10 #standard value hovers ~0, but up to 400 in geomagnetic storms
+
+    # TTP prototype preset 
+    elif sat_choice == "C":
+        name = "Thermosphere Test Probe"
+        mass = .8 #kg
+        area = 0.79 #m^2
+        initialAlt = 400 #will be deployed from ISS
+        SRF = 70 #standard values range 65-300
+        GMI = 10 #standard value hovers ~0, but up to 400 in geomagnetic storms
+
+    H = initialAlt
+    h = [int(H)]
+
+
+#------START ATTRIBUTED CODE SECTION ----------
+#Code based on calculations from :
+#http://www.sws.bom.gov.au/Category/Educational/Space%20Weather/Space%20Weather%20Effects/SatelliteOrbitalDecayCalculations.pdf
+
+    #CONSTANTS
+    Re = 6378000 #radius of earth, m
+    Me = 5.98*(10**24)#mass of earth, kg
+    G = 6.67*(10**-11)#newtonian constant
+    pi = 3.149 #pi
+    e = 2.719 #e
+
+    dH = 10 #incremental height, km
+    dt = 0.01 #incremental time, days
+
+    DT = dt * 3600 * 24 # dt in seconds 
+
+    T = [0.0] #initial time
+    R = [Re + h[-1]*1000] #orbital radius
+    P = [2*pi*math.sqrt(R[0]**3 /Me/G)] #orbital period, sec
+    SH = [0] #satellite height
+    DN = [0] #density
+    Pm = [0]#paramter for mean motion
+    Decay = [0] #orbital decay
+    MM = [0] #mean motion
+    nMM = [0] #paramter for mean motion
+    i = 0
+    l = []
+    for i in range (initialAlt, 170, -dH):
+        l.append(i)
+
+#run the calculator until the satellite reenters at 180km 
+    while int(h[-1]) >= 180:
+        i = i +1 
+        SH.append((900 + 2.5 * (SRF - 70) + 1.5 * GMI) / ( 27 - 0.012 * (h[-1] - 200)))
+        DN.append(6*(10**(-10)) * e**((-(h[-1] - 175))/SH[-1]))
+        dP = 3 * pi * area / mass * R[-1] * DN[-1] * DT
+        Pm.append(P[-1] / 60)
+        MM.append(1440 / Pm[-1])
+        Decay.append(dP / dt / P[-1] * MM[-1])       
+
+        P.append(P[-1] - dP)
+        T.append(T[-1]+dt)
+        R.append((G * Me * P[-1] * P[-1] / 4 / pi / pi)**(.33333))
+        h.append((R[-1] - Re)/ 1000)
+        if int(h[-1]) < 180:
+           break
+
+        
+#------END ATTRIBUTED CODE SECTION ----------
+
+        
+    #prints results in a table-eqsue layout
+    steps = len(T)//20
+    print("--------------------------------------------------------------------------")
+    print("|TIME(days)|Height(km)|Period(min)|MEAN MOTION (rev/day)|DECAY(rev/day^2)|")
+    print("--------------------------------------------------------------------------")
+    for j in range(21):
+        j = int(j*steps)
+        print("|{0:^10}|{1:^10}|{2:^11}|{3:^21}|{4:^16}|".format(round(T[j],3),round(h[j],3),round(P[j],3),round(MM[j],3),round(Decay[j],3)))
+    print("|{0:^10}|{1:^10}|{2:^11}|{3:^21}|{4:^16}|".format(round(T[-1],3),round(h[-1],3),round(P[-1],3),round(MM[-1],3),round(Decay[-1],3)))  
+    print("--------------------------------------------------------------------------")
+    print("")
+    print("Congrats!",name,"re-enters the atmosphere after",round(T[-1],3),"days.")
+
+
+#-------------------------------------------------------------------------------------------------------
+
+    
+#FAQ FUNCTION
+def FAQ_fx():
+    
+    FAQ=input("""Enter a letter corresponding to your question:
+    A - How did you do the math?
+    B - Why does this matter?
+    C - What are Geomagnetic Index and Solar Radio Flux really?
+    D - I ran the ISS preset and I think the answer is wrong! What gives?
+    E - Who made this program?
+    F - Why was this program made?
+    G - What are the limiting factors of this program?
+    H - I have another question! How can I contact the makers?
+    """).upper()
+
+    if FAQ == "A": #How did you do the math?
+        print("""We found it online and learned! We used this website, courteousy of the Australian Bureau of Meteorology:
+http://www.sws.bom.gov.au/Category/Educational/Space%20Weather/Space%20Weather%20Effects/SatelliteOrbitalDecayCalculations.pdf
+    """) 
+
+    elif FAQ == "B": #Why does this matter?
+        print("""Some ambitious students (like us) want to start cubesat programs but don't know much about orbital mechanics yet!
+A limited knowlege of orbital mechanics can scare some students out of pursuing their dreams and limit their opportunities.
+By making this topic more accessible, students can better pursue small space projects, learn orbital mechanics as they go,
+and advance science with their efforts!
+    """)
+
+    elif FAQ == "C": #What's Geomagnetic Index and Solar Radio Flux?
+        print("""Earth's magnetic field varies dependent on solar radiation.
+The Geomagnetic Index is a way to quantify the variation in the magnetosphere!
+The Ap index (which this program uses) is defined as:
+"the earliest occurring maximum 24-hour value obtained by computing an 8-point running average" according to NOAA.
+Other indeces include Kp, AA, and more! The major variants come from where on Earth you're measuring and how long you're taking in data.
+It is also unitless.
+    
+Similarly, Solar Radio Flux also indicates solar activity.
+The solar radio flux at 10.7 cm (2800 MHz) is an excellent indicator of solar activity.
+It uses the F10.7 index which is one of the "longest running records of solar activity" according to NOAA.
+It's called the F10.7 index because it looks at light coming from the sun at the wavelength of 10.7 cm.
+Often called the F10.7 index, it is one of the longest running records of solar activity.
+Activity is typically measured in SFU, or Solar Flux Units.
+    """)
+
+    elif FAQ == "D": #I ran the ISS preset and I think the answer is wrong! What gives?
+        print("""Our calculator holds Solar Flux and Geomagnetic Index constant while in reality, they're changing, especially
+over time. Because our calculator operates under an assumption that is acceptable for faster de-orbiting satellites like cubesats,
+there's larger errors for something as large and long term as the ISS and where orbital decay is so small.
+After all, the ISS's construction in space started in 1998.
+Also, for context, SkyLab (a smaller space station from the 1970s) was in orbit for 6 years before it re-entered the atmosphere. 
+    """)
+
+    elif FAQ == "E": #Who made this program?
+        print( """The makers of this program are Alina Siminiouk and Hannah Durkee, engineering students taking CSC 111 at Smith College.
+    """)
+
+    elif FAQ == "F": #Why was this program made?
+        print("""We like space!
+We're on the NASA-Smith Thermosphere Test Probe team and we needed a tool like this to help us determine how big to make our space balloon
+so that it de-orbits within a week.
+    """)
+
+    elif FAQ == "G": #What are the limiting factors of this program?
+        print("""One limiting factor is that this calculator assumes that the Geomagnetic Index and Solar Radio Flux are constant
+for the whole orbit. This is usually incorrect, however, it is close enough to reality that it is a valid assumption.
+Also, this calculator functions on "steps" such as in Euler's method,
+so you might not get the exact answer but you'll get an excellent approximation.
+Similarly, the atmosphere can vary in ways not fully predictable (gusts of wind, space 'trash', etc.), so this is all our best prediction!
+    """)
+
+    else: #I have another question! How can I contact the makers?
+        print("Contact the makers at asiminiouk@smith.edu and hdurkee@smith.edu with more questions")
+
+
+#-------------------------------------------------------------------------------------------------------
+
+#allows the user to move from faq to calculator and vice versa, or end the program 
+def ask_again_fx():
+        askAGAIN = input('''
+        if you would like to use the FAQ : FAQ
+        if you would like to go use the calculator : CALC
+        if you would like to stop : END
+        ''').upper()
+        
+        while askAGAIN == "CALC" or askAGAIN =="FAQ":
+
+            if askAGAIN =="CALC":
+                sat_calc()
+                askAGAIN = input('''
+        if you would like to use the FAQ : FAQ
+        if you would like to go use the calculator : CALC
+        if you would like to stop : END
+        ''').upper()
+
+            elif askAGAIN =="FAQ":
+                FAQ_fx()
+                askAGAIN = input('''
+        if you would like to use the FAQ : FAQ
+        if you would like to go use the calculator : CALC
+        if you would like to stop : END
+        ''').upper()
+
+                
+#ASCII art from : https://www.asciiart.eu/space/planets
+        print("""
+Goodbye! We hope the rest of your day is out of this world!
+
+              _-o#&&*''''?d:>b\_
+          _o/"`''  '',, dMF9MMMMMHo_
+       .o&#'        `"MbHMMMMMMMMMMMHo.
+     .o"" '         vodM*$&&HMMMMMMMMMM?.
+    ,'              $M&ood,~'`(&##MMMMMMH|
+   /               .MMMMMMM#b?#bobMMMMHMMML
+  &              ?MMMMMMMMMMMMMMMMM7MMM$R*Hk
+ ?$.            :MMMMMMMMMMMMMMMMMMM/HMMM|`*L
+|               |MMMMMMMMMMMMMMMMMMMMbMH'   T,
+$H#:            `*MMMMMMMMMMMMMMMMMMMMb#}'  `?
+]MMH#             ""******#MMMMMMMMMMMMM'    -
+MMMMMb_                   |MMMMMMMMMMMP'     :
+HMMMMMMMHo                 `MMMMMMMMMT       .
+?MMMMMMMMP                  9MMMMMMMM}       -
+-?MMMMMMM                  |MMMMMMMMM?,d-    '
+ :|MMMMMM-                 `MMMMMMMT .M|.   :
+  .9MMM[                    &MMMMM*' `'    .
+   :9MMk                    `MMM#"        -
+     &M}                     `          .-
+      `&.                             .
+        `~,   .                     ./
+            . _                  .-
+              '`--._,dd###pp=""'""")
+        
+
+
+#-------------------------------------------------------------------------------------------------------
+ 
+def intro():
+    #friendly user interface to welcome the user
+    #ASCII art from https://www.asciiart.eu/space/other
+    print("""
+ .              +   .                .   . .     .  .
+                   .                    .       .     *
+  .       *                        . . . .  .   .  + .
+            "Your satellite"            .   .  +  . . .
+.                 |             .  .   .    .    . .
+                  |           .     .     . +.    +  .
+                 \|/            .       .   . .
+        . .       V          .    * . . .  .  +   .
+           +      .           .   .      +
+                            .       . +  .+. .
+  .                      .     . + .  . .     .      .
+           .      .    .     . .   . . .        ! /
+      *             .    . .  +    .  .       - O -
+          .     .    .  +   . .  *  .       . / |
+               . + .  .  .  .. +  .
+.      .  .  .  *   .  *  . +..  .            *
+                                       _..-,--.._
+                                 ,`. ,',','      `.
+                                 `. `,/`/          \
+
+        ____ _          _ __       | |`|            |
+      _(    `.)        ( (  )`.    : `-'            ;     _
+     ( (    ) ))      ( (    ))    ,\_            _/.  (`','
+    ( (   )  _)        `-(__.'    '.  ```------'''  .`
+     '.__)--'       .-..           |``-...____...-''|
+                   (_)_))          |                |
+              ,'`.        ___...---|                |--..._
+  ,'`. ,'`. ,'   _`.---'''         |                | "
+-'..._`.   `.   /`-._  "      "    |    _           |
+       ```-..`./:::::)             `-...||______...-'    "
+              /:::_.'     "        "                "
+           _.:.'''   "                       "          
+
+                 
+***Welcome to the Satellite Deorbit Calculator!***
+
+This Calculator can be used to predict the lifetime of a satellite.
+
+Before you start, there are some things you should know!
+
+If you choose to create your own custom satellite instead of running a preset, you should know a few things about the variables:
+-Pay attention to units! If you don't match the units, you won't get the right answer.
+- Your initial altitude *must* be between 180km and 500km. Orbital mechanics functions a little differently outside of Low Earth Orbit (LEO)
+-Solar Radio Flux is dependent on solar activity and has values that range from 60 to 300, but are typically low if there are no solar storms
+-Geomagnetic Index is dependent on Earth's magnetic pull and has values that range 0-400, but are typically close to 0
+-Reentry typically occurs at 180km above the surface of the Earth
+
+You are now ready!
+""")
+
+#-------------------------------------------------------------------------------------------------------
+     
+if __name__ == "__main__":
+    main()
